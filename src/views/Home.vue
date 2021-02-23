@@ -67,7 +67,7 @@ export default class Home extends Vue {
     // console.log(this.myArray)
   }
   mounted() {
-    console.log(this.$refs.page)
+    // console.log(this.$refs.page)
 
     this.pageWidth = (this.$refs.page as any).offsetWidth
     this.updateElementPosition()
@@ -76,10 +76,10 @@ export default class Home extends Vue {
    * 更新所有元素定位
    */
   updateElementPosition() {
-    const fillArr: PageElement[] = []
+    let fillArr: PageElement[] = []
     // 所有元素按y坐标升序排序
     this.myArray = sortBy(this.myArray, ['y', 'x'])
-    console.log(this.myArray.map((item) => item.name))
+    console.table(this.myArray.map((item) => item.name))
     // console.log(this.pageWidth)
 
     this.myArray.forEach((ele: PageElement, index: number) => {
@@ -88,7 +88,8 @@ export default class Home extends Vue {
       function updateFillArr() {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
           return (
-            fillEle.width + fillEle.x === ele.x &&
+            (fillEle.width + fillEle.x === ele.x ||
+              ele.x + ele.width === fillEle.x) &&
             fillEle.y === ele.y &&
             fillEle.height === ele.height
           )
@@ -102,12 +103,14 @@ export default class Home extends Vue {
           // todo 是否需要合并同列等宽填充元素？
         } else {
           fillArr.push({
+            name: ele.name,
             x: ele.x,
             y: ele.y,
             width: ele.width,
             height: ele.height,
           })
         }
+        fillArr = sortBy(fillArr, ['y', 'x'])
       }
       if (index === 0) {
         ele.y = 0
@@ -152,9 +155,8 @@ export default class Home extends Vue {
         }
         ele.y = fillEle.y + fillEle.height
       }
+      console.log(fillArr)
       updateFillArr()
-
-      // console.log(fillArr)
     })
   }
   // 触发选中操作元素
