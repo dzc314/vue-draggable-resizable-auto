@@ -84,6 +84,7 @@ export default class Home extends Vue {
 
     this.myArray.forEach((ele: PageElement, index: number) => {
       // console.log(ele)
+      // 更新填充数据
       function updateFillArr() {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
           return (
@@ -95,7 +96,10 @@ export default class Home extends Vue {
         console.log(sameRowEle)
         if (sameRowEle) {
           // 合并同行等高填充元素
+          // todo 是否需插入一个空元素
           sameRowEle.width += ele.width
+
+          // todo 是否需要合并同列等宽填充元素？
         } else {
           fillArr.push({
             x: ele.x,
@@ -136,7 +140,7 @@ export default class Home extends Vue {
         spaceEnd = fillEle.x
         const prevEle = fillArr[i - 1]
         let leftSpaceX = 0
-        if (i != 0 && prevEle) {
+        if (i != 0 && prevEle && prevEle.y >= fillEle.y) {
           leftSpaceX = prevEle.x + prevEle.width
           spaceEnd -= leftSpaceX
         }
@@ -150,7 +154,7 @@ export default class Home extends Vue {
       }
       updateFillArr()
 
-      console.log(fillArr)
+      // console.log(fillArr)
     })
   }
   // 触发选中操作元素
@@ -175,6 +179,8 @@ export default class Home extends Vue {
   // 元素大小操作
   onResizing(x: number, y: number, width: number, height: number) {
     // console.log(width, height)
+    this.editElement.x = x
+    this.editElement.y = y
     this.editElement.width = width
     this.editElement.height = height
     this.updateElementPosition()
