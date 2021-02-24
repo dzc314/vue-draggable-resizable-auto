@@ -30,7 +30,7 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { find, sortBy } from 'lodash'
+import { find, sortBy, throttle } from 'lodash'
 interface PageElement {
   id?: number
   name?: string
@@ -72,10 +72,11 @@ export default class Home extends Vue {
     this.pageWidth = (this.$refs.page as any).offsetWidth
     this.updateElementPosition()
   }
+  updateElementPosition = throttle(this.updateElementPositionFn, 100)
   /*
    * 更新所有元素定位
    */
-  updateElementPosition() {
+  updateElementPositionFn() {
     let fillArr: PageElement[] = []
     // 所有元素按y坐标升序排序
     this.myArray = sortBy(this.myArray, ['y', 'x'])
@@ -85,7 +86,7 @@ export default class Home extends Vue {
     this.myArray.forEach((ele: PageElement, index: number) => {
       // console.log(ele)
       // 更新填充数据
-      function updateFillArr() {
+      function updateFillArr(ele: PageElement) {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
           return (
             (fillEle.width + fillEle.x === ele.x ||
@@ -94,13 +95,15 @@ export default class Home extends Vue {
             fillEle.height === ele.height
           )
         })
-        console.log(sameRowEle)
+        // console.log(sameRowEle)
         if (sameRowEle) {
           // 合并同行等高填充元素
-          // todo 是否需插入一个空元素
+          // 插入元素在左侧
+          if (ele.x < sameRowEle.x) {
+            sameRowEle.x -= ele.width
+          }
           sameRowEle.width += ele.width
-
-          // todo 是否需要合并同列等宽填充元素？
+          // todo 是否需插入一个空元素
         } else {
           fillArr.push({
             name: ele.name,
@@ -112,9 +115,39 @@ export default class Home extends Vue {
         }
         fillArr = sortBy(fillArr, ['y', 'x'])
       }
+
+      // 找到当前元素的上一行阻挡元素
+      function findTopY(ele: PageElement) {
+        const len = fillArr.length
+        let y = 0
+        // 从下往上找
+        for (let i = len; i >= 0; i--) {
+          const fillEle = fillArr[i]
+          // console.log(fillEle)
+          if (!fillEle) {
+            continue
+          }
+          if (
+            (fillEle.x <= ele.x && fillEle.x + fillEle.width > ele.x) ||
+            (ele.x + ele.width > fillEle.x &&
+              ele.x + ele.width <= fillEle.x + fillEle.width)
+          ) {
+            y = Math.max(fillEle.y + fillEle.height, y)
+          }
+        }
+        return y
+      }
+      // 第一个元素优先处理
       if (index === 0) {
         ele.y = 0
-        updateFillArr()
+        updateFillArr(ele)
+        return
+      }
+      // 找到拦截的y点
+      const y = findTopY(ele)
+      if (y) {
+        ele.y = y
+        updateFillArr(ele)
         return
       }
 
@@ -135,7 +168,11 @@ export default class Home extends Vue {
         }
         if (spaceStar <= ele.x && spaceEnd >= ele.x + ele.width) {
           ele.y = fillEle.y
-          updateFillArr()
+          console.log(fillEle)
+
+          console.log(ele)
+
+          updateFillArr(ele)
           // ele.x = fillEle.x + fillEle.width
           return
         }
@@ -150,13 +187,13 @@ export default class Home extends Vue {
         if (ele.x + ele.width <= spaceEnd && ele.x >= leftSpaceX) {
           // console.log(fillEle)
           ele.y = fillEle.y
-          updateFillArr()
+          updateFillArr(ele)
           return
         }
         ele.y = fillEle.y + fillEle.height
       }
-      console.log(fillArr)
-      updateFillArr()
+      // console.log(fillArr)
+      updateFillArr(ele)
     })
   }
   // 触发选中操作元素
@@ -171,7 +208,7 @@ export default class Home extends Vue {
     this.editElement.y = y
     // this.updateElementPosition()
   }
-  onDragstop(x: number, y: number) {
+  onDragstop() {
     // console.log(x, y)
     // this.editElement.x = x
     // this.editElement.y = y
@@ -196,6 +233,7 @@ export default class Home extends Vue {
   height: 1000px;
   > div {
     border: 1px solid #ddd;
+    cursor: pointer;
   }
 }
 </style>
