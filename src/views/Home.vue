@@ -14,7 +14,7 @@
       :y="element.y"
       :min-width="120"
       :min-height="120"
-      :grid="[40, 40]"
+      :grid="[20, 20]"
       :style="`transform: translate(${element.x}px,${element.y}px)`"
     >
       <p>
@@ -80,11 +80,8 @@ export default class Home extends Vue {
     let fillArr: PageElement[] = []
     // 所有元素按y坐标升序排序
     this.myArray = sortBy(this.myArray, ['y', 'x'])
-    console.table(this.myArray.map((item) => item.name))
-    // console.log(this.pageWidth)
-
+    // console.table(this.myArray.map((item) => item.name))
     this.myArray.forEach((ele: PageElement, index: number) => {
-      // console.log(ele)
       // 更新填充数据
       function updateFillArr(ele: PageElement) {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
@@ -98,15 +95,13 @@ export default class Home extends Vue {
         // console.log(sameRowEle)
         if (sameRowEle) {
           // 合并同行等高填充元素
-          // 插入元素在左侧
           if (ele.x < sameRowEle.x) {
+            // 插入元素在左侧
             sameRowEle.x -= ele.width
           }
           sameRowEle.width += ele.width
-          // todo 是否需插入一个空元素
         } else {
           fillArr.push({
-            name: ele.name,
             x: ele.x,
             y: ele.y,
             width: ele.width,
@@ -127,10 +122,12 @@ export default class Home extends Vue {
           if (!fillEle) {
             continue
           }
+          const fillEnd = fillEle.x + fillEle.width
+          const eleEnd = ele.x + ele.width
           if (
-            (fillEle.x <= ele.x && fillEle.x + fillEle.width > ele.x) ||
-            (ele.x + ele.width > fillEle.x &&
-              ele.x + ele.width <= fillEle.x + fillEle.width)
+            (ele.x >= fillEle.x && ele.x < fillEnd) ||
+            (eleEnd > fillEle.x && eleEnd <= fillEnd) ||
+            (ele.x <= fillEle.x && eleEnd >= fillEnd)
           ) {
             y = Math.max(fillEle.y + fillEle.height, y)
           }
@@ -144,56 +141,44 @@ export default class Home extends Vue {
         return
       }
       // 找到拦截的y点
-      const y = findTopY(ele)
-      if (y) {
-        ele.y = y
-        updateFillArr(ele)
-        return
-      }
-
-      for (let i = 0; i < fillArr.length; i++) {
-        const fillEle = fillArr[i]
-        if (!fillEle) {
-          continue
-        }
-
-        let spaceStar = 0
-        spaceStar = fillEle.x + fillEle.width
-        let spaceEnd = this.pageWidth
-        const nextEle = fillArr[i + 1]
-        // todo nextEle.y === fillEle.y逻辑要改为是否在同一行的判断
-        // 从右侧插入
-        if (nextEle && nextEle.y < fillEle.y + fillEle.height) {
-          spaceEnd -= spaceEnd - nextEle.x
-        }
-        if (spaceStar <= ele.x && spaceEnd >= ele.x + ele.width) {
-          ele.y = fillEle.y
-          console.log(fillEle)
-
-          console.log(ele)
-
-          updateFillArr(ele)
-          // ele.x = fillEle.x + fillEle.width
-          return
-        }
-        // 从左侧插入
-        spaceEnd = fillEle.x
-        const prevEle = fillArr[i - 1]
-        let leftSpaceX = 0
-        if (i != 0 && prevEle && prevEle.y >= fillEle.y) {
-          leftSpaceX = prevEle.x + prevEle.width
-          spaceEnd -= leftSpaceX
-        }
-        if (ele.x + ele.width <= spaceEnd && ele.x >= leftSpaceX) {
-          // console.log(fillEle)
-          ele.y = fillEle.y
-          updateFillArr(ele)
-          return
-        }
-        ele.y = fillEle.y + fillEle.height
-      }
-      // console.log(fillArr)
+      ele.y = findTopY(ele)
       updateFillArr(ele)
+      return
+
+      // for (let i = 0; i < fillArr.length; i++) {
+      //   const fillEle = fillArr[i]
+      //   if (!fillEle) {
+      //     continue
+      //   }
+
+      //   let spaceStar = 0
+      //   spaceStar = fillEle.x + fillEle.width
+      //   let spaceEnd = this.pageWidth
+      //   const nextEle = fillArr[i + 1]
+      //   // todo nextEle.y === fillEle.y逻辑要改为是否在同一行的判断
+      //   // 从右侧插入
+      //   if (nextEle && nextEle.y === fillEle.y) {
+      //     spaceEnd -= spaceEnd - nextEle.x
+      //   }
+      //   if (spaceStar <= ele.x && spaceEnd >= ele.x + ele.width) {
+      //     ele.y = fillEle.y
+      //     updateFillArr(ele)
+      //     return
+      //   }
+      //   // 从左侧插入
+      //   spaceEnd = fillEle.x
+      //   const prevEle = fillArr[i - 1]
+      //   let leftSpaceX = 0
+      //   if (i != 0 && prevEle && prevEle.y >= fillEle.y) {
+      //     leftSpaceX = prevEle.x + prevEle.width
+      //     spaceEnd -= leftSpaceX
+      //   }
+      //   if (ele.x + ele.width <= spaceEnd && ele.x >= leftSpaceX) {
+      //     ele.y = fillEle.y
+      //     updateFillArr(ele)
+      //     return
+      //   }
+      // }
     })
   }
   // 触发选中操作元素
