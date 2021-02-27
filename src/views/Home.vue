@@ -1,30 +1,35 @@
 <template>
-  <div class="home" ref="page">
-    <vue-draggable-resizable
-      v-for="element in myArray"
-      :key="element.id"
-      @dragging="onDragging"
-      @dragstop="onDragstop"
-      @resizing="onResizing"
-      @mousedown.native="mousedown(element)"
-      :parent="true"
-      :w="element.width"
-      :h="element.height"
-      :x="element.x"
-      :y="element.y"
-      :min-width="120"
-      :min-height="120"
-      :grid="[20, 20]"
-      :style="`transform: translate(${element.x}px,${element.y}px)`"
-    >
-      <p>
-        {{ element.name }} <br />
-        X: {{ element.x }} <br />
-        Y: {{ element.y }} <br />
-        Width:{{ element.width }} <br />
-        Height:{{ element.height }}
-      </p>
-    </vue-draggable-resizable>
+  <div ref="page">
+    <div class="bi-layout" :style="layoutStyle">
+      <vue-draggable-resizable
+        v-for="element in myArray"
+        :key="element.id"
+        @dragging="onDragging"
+        @dragstop="onDragstop"
+        @resizing="onResizing"
+        @mousedown.native="mousedown(element)"
+        :parent="true"
+        :w="element.width"
+        :h="element.height"
+        :x="element.x"
+        :y="element.y"
+        :min-width="120"
+        :min-height="60"
+        :grid="[20, 20]"
+        :scale="scale"
+        :handles="handles"
+        drag-handle=".view-box"
+        :style="`transform: translate(${element.x}px,${element.y}px)`"
+      >
+        <div class="view-box">
+          {{ element.name }} <br />
+          X: {{ element.x }} <br />
+          Y: {{ element.y }} <br />
+          Width:{{ element.width }} <br />
+          Height:{{ element.height }}
+        </div>
+      </vue-draggable-resizable>
+    </div>
   </div>
 </template>
 
@@ -43,7 +48,10 @@ interface PageElement {
   components: {},
 })
 export default class Home extends Vue {
-  pageWidth = 1920
+  pageWidth = 1440
+  pageHeight = 800
+  scale = 1
+  handles: string[] = ['tl', 'tr', 'br', 'bl']
   myArray: PageElement[] = []
   editElement: PageElement = {
     x: 0,
@@ -51,7 +59,34 @@ export default class Home extends Vue {
     width: 0,
     height: 0,
   }
+  get layoutStyle() {
+    return {
+      width: `${this.pageWidth}px`,
+      height: `${this.pageHeight}px`,
+      transform: `scale(${this.scale})`,
+    }
+  }
   created() {
+    this.dataInit()
+    // console.log(this.myArray)
+  }
+  mounted() {
+    // console.log(this.$refs.page)
+    this.pageInit()
+    this.updateElementPosition()
+    window.addEventListener('resize', this.pageInit)
+  }
+  beforeDestroy() {
+    window.removeEventListener('resize', this.pageInit)
+  }
+
+  pageInit() {
+    const pageWidth = (this.$refs.page as any).offsetWidth
+    // const pageWidth = document.body.offsetWidth
+    this.scale = Math.round((pageWidth / this.pageWidth) * 10000) / 10000
+  }
+  // 初始化demo数据
+  dataInit() {
     this.myArray = new Array(6).fill('').map((item, index) => {
       const id = index + 1
       const element: PageElement = {
@@ -64,26 +99,21 @@ export default class Home extends Vue {
       }
       return element
     })
-    // console.log(this.myArray)
   }
-  mounted() {
-    // console.log(this.$refs.page)
 
-    this.pageWidth = (this.$refs.page as any).offsetWidth
-    this.updateElementPosition()
-  }
   updateElementPosition = throttle(this.updateElementPositionFn, 100)
   /*
    * 更新所有元素定位
    */
   updateElementPositionFn() {
     let fillArr: PageElement[] = []
+    let fillHeight = this.pageHeight
     // 所有元素按y坐标升序排序
     this.myArray = sortBy(this.myArray, ['y', 'x'])
     // console.table(this.myArray.map((item) => item.name))
     this.myArray.forEach((ele: PageElement, index: number) => {
       // 更新填充数据
-      function updateFillArr(ele: PageElement) {
+      const updateFillArr = (ele: PageElement) => {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
           return (
             (fillEle.width + fillEle.x === ele.x ||
@@ -109,11 +139,12 @@ export default class Home extends Vue {
           })
         }
         fillArr = sortBy(fillArr, ['y', 'x'])
+        fillHeight = Math.max(fillHeight, ele.y + ele.height + 200)
       }
 
       // 找到当前元素的上一行阻挡元素
       function findTopY(ele: PageElement) {
-        const len = fillArr.length
+        const len = fillArr.length - 1
         let y = 0
         // 从下往上找
         for (let i = len; i >= 0; i--) {
@@ -124,13 +155,17 @@ export default class Home extends Vue {
           }
           const fillEnd = fillEle.x + fillEle.width
           const eleEnd = ele.x + ele.width
-          if (
-            (ele.x >= fillEle.x && ele.x < fillEnd) ||
-            (eleEnd > fillEle.x && eleEnd <= fillEnd) ||
-            (ele.x <= fillEle.x && eleEnd >= fillEnd)
-          ) {
-            y = Math.max(fillEle.y + fillEle.height, y)
+          if (ele.x >= fillEnd || eleEnd <= fillEle.x) {
+            continue
           }
+          y = Math.max(fillEle.y + fillEle.height, y)
+          // if (
+          //   (ele.x >= fillEle.x && ele.x < fillEnd) ||
+          //   (eleEnd > fillEle.x && eleEnd <= fillEnd) ||
+          //   (ele.x <= fillEle.x && eleEnd >= fillEnd)
+          // ) {
+          //   y = Math.max(fillEle.y + fillEle.height, y)
+          // }
         }
         return y
       }
@@ -180,6 +215,7 @@ export default class Home extends Vue {
       //   }
       // }
     })
+    this.pageHeight = fillHeight
   }
   // 触发选中操作元素
   mousedown(ele: PageElement) {
@@ -212,13 +248,52 @@ export default class Home extends Vue {
 }
 </script>
 <style lang="scss" scoped>
-.home {
+* {
+  box-sizing: border-box;
+}
+.bi-layout {
   position: relative;
-  width: 1000px;
+  width: 100%;
   height: 1000px;
-  > div {
+  padding: 5px;
+  transform-origin: 0 0;
+  background-color: #ebeaef;
+  // transform: scale(0.8);
+}
+/deep/.draggable.resizable {
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  .view-box {
+    height: 100%;
     border: 1px solid #ddd;
-    cursor: pointer;
+    padding: 10px;
+    background-color: #fff;
+    overflow: hidden;
+  }
+  &.active > .view-box {
+    box-shadow: 0 0 7px #ccc;
+  }
+  > .handle {
+    width: 15px;
+    height: 15px;
+    opacity: 0;
+    &.handle-tl {
+      top: 0;
+      left: 0;
+    }
+    &.handle-tr {
+      top: 0;
+      right: 0;
+    }
+    &.handle-bl {
+      bottom: 0;
+      left: 0;
+    }
+    &.handle-br {
+      bottom: 0;
+      right: 0;
+    }
   }
 }
 </style>
