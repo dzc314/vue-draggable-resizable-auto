@@ -8,7 +8,6 @@
         @dragstop="onDragstop"
         @resizing="onResizing"
         @mousedown.native="mousedown(element)"
-        :parent="true"
         :w="element.width"
         :h="element.height"
         :x="element.x"
@@ -19,7 +18,7 @@
         :scale="scale"
         :handles="handles"
         drag-handle=".view-box"
-        :style="`transform: translate(${element.x}px,${element.y}px)`"
+        :style="`transform: translate(${element.x}px,${element.y}px);width: ${element.width}px`"
       >
         <div class="view-box">
           {{ element.name }} <br />
@@ -35,7 +34,7 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { find, sortBy, throttle } from 'lodash'
+import { find, max, sortBy, throttle } from 'lodash'
 interface PageElement {
   id?: number
   name?: string
@@ -48,7 +47,7 @@ interface PageElement {
   components: {},
 })
 export default class Home extends Vue {
-  pageWidth = 1440
+  pageWidth = 1430
   pageHeight = 800
   scale = 1
   handles: string[] = ['tl', 'tr', 'br', 'bl']
@@ -112,6 +111,9 @@ export default class Home extends Vue {
     this.myArray = sortBy(this.myArray, ['y', 'x'])
     // console.table(this.myArray.map((item) => item.name))
     this.myArray.forEach((ele: PageElement, index: number) => {
+      ele.x = Math.min(this.pageWidth - 10 - ele.width, ele.x)
+      ele.x = Math.max(0, ele.x)
+
       // 更新填充数据
       const updateFillArr = (ele: PageElement) => {
         const sameRowEle = find(fillArr, (fillEle: PageElement) => {
@@ -238,9 +240,14 @@ export default class Home extends Vue {
 
   // 元素大小操作
   onResizing(x: number, y: number, width: number, height: number) {
-    // console.log(width, height)
+    console.log(width)
+    if (x < 0) {
+      width += x
+    }
+    x = Math.max(x, 0)
     this.editElement.x = x
     this.editElement.y = y
+    width = Math.min(this.pageWidth - 10 - x, width)
     this.editElement.width = width
     this.editElement.height = height
     this.updateElementPosition()
