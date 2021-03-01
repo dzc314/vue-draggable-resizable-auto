@@ -1,5 +1,5 @@
 <template>
-  <div ref="page">
+  <div ref="page" :style="pageStyle">
     <div class="bi-layout" :style="layoutStyle">
       <vue-draggable-resizable
         v-for="element in myArray"
@@ -65,6 +65,11 @@ export default class Home extends Vue {
       transform: `scale(${this.scale})`,
     }
   }
+  get pageStyle() {
+    return {
+      height: `${this.pageHeight * this.scale}px`,
+    }
+  }
   created() {
     this.dataInit()
     // console.log(this.myArray)
@@ -111,8 +116,12 @@ export default class Home extends Vue {
     this.myArray = sortBy(this.myArray, ['y', 'x'])
     // console.table(this.myArray.map((item) => item.name))
     this.myArray.forEach((ele: PageElement, index: number) => {
-      ele.x = Math.min(this.pageWidth - 10 - ele.width, ele.x)
-      ele.x = Math.max(0, ele.x)
+      // 范围限制
+      if (ele.x < 0) {
+        ele.x = Math.max(0, ele.x)
+      } else {
+        ele.x = Math.min(this.pageWidth - 10 - ele.width, ele.x)
+      }
 
       // 更新填充数据
       const updateFillArr = (ele: PageElement) => {
@@ -240,7 +249,6 @@ export default class Home extends Vue {
 
   // 元素大小操作
   onResizing(x: number, y: number, width: number, height: number) {
-    console.log(width)
     if (x < 0) {
       width += x
     }
