@@ -1,5 +1,6 @@
 <template>
   <div ref="page" :style="pageStyle">
+    <button @click="add" style="position: fixed; top: 0; left: 0; z-index: 9999;">添加</button>
     <div class="bi-layout" :style="layoutStyle">
       <vue-draggable-resizable
         v-for="element in myArray"
@@ -18,7 +19,9 @@
         :scale="scale"
         :handles="handles"
         drag-handle=".view-box"
-        :style="`transform: translate(${element.x}px,${element.y}px);width: ${element.width}px`"
+        :style="
+          `transform: translate(${element.x}px,${element.y}px);width: ${element.width}px`
+        "
       >
         <div class="view-box">
           {{ element.name }} <br />
@@ -52,6 +55,7 @@ export default class Home extends Vue {
   scale = 1
   handles: string[] = ['tl', 'tr', 'br', 'bl']
   myArray: PageElement[] = []
+  fillArr: PageElement[] = []
   editElement: PageElement = {
     x: 0,
     y: 0,
@@ -91,7 +95,7 @@ export default class Home extends Vue {
   }
   // 初始化demo数据
   dataInit() {
-    this.myArray = new Array(6).fill('').map((item, index) => {
+    this.myArray = new Array(4).fill('').map((item, index) => {
       const id = index + 1
       const element: PageElement = {
         id,
@@ -170,13 +174,6 @@ export default class Home extends Vue {
             continue
           }
           y = Math.max(fillEle.y + fillEle.height, y)
-          // if (
-          //   (ele.x >= fillEle.x && ele.x < fillEnd) ||
-          //   (eleEnd > fillEle.x && eleEnd <= fillEnd) ||
-          //   (ele.x <= fillEle.x && eleEnd >= fillEnd)
-          // ) {
-          //   y = Math.max(fillEle.y + fillEle.height, y)
-          // }
         }
         return y
       }
@@ -190,42 +187,8 @@ export default class Home extends Vue {
       ele.y = findTopY(ele)
       updateFillArr(ele)
       return
-
-      // for (let i = 0; i < fillArr.length; i++) {
-      //   const fillEle = fillArr[i]
-      //   if (!fillEle) {
-      //     continue
-      //   }
-
-      //   let spaceStar = 0
-      //   spaceStar = fillEle.x + fillEle.width
-      //   let spaceEnd = this.pageWidth
-      //   const nextEle = fillArr[i + 1]
-      //   // todo nextEle.y === fillEle.y逻辑要改为是否在同一行的判断
-      //   // 从右侧插入
-      //   if (nextEle && nextEle.y === fillEle.y) {
-      //     spaceEnd -= spaceEnd - nextEle.x
-      //   }
-      //   if (spaceStar <= ele.x && spaceEnd >= ele.x + ele.width) {
-      //     ele.y = fillEle.y
-      //     updateFillArr(ele)
-      //     return
-      //   }
-      //   // 从左侧插入
-      //   spaceEnd = fillEle.x
-      //   const prevEle = fillArr[i - 1]
-      //   let leftSpaceX = 0
-      //   if (i != 0 && prevEle && prevEle.y >= fillEle.y) {
-      //     leftSpaceX = prevEle.x + prevEle.width
-      //     spaceEnd -= leftSpaceX
-      //   }
-      //   if (ele.x + ele.width <= spaceEnd && ele.x >= leftSpaceX) {
-      //     ele.y = fillEle.y
-      //     updateFillArr(ele)
-      //     return
-      //   }
-      // }
     })
+    this.fillArr = fillArr
     this.pageHeight = fillHeight
   }
   // 触发选中操作元素
@@ -260,6 +223,85 @@ export default class Home extends Vue {
     this.editElement.height = height
     this.updateElementPosition()
   }
+
+  add() {
+    // console.log(this.myArray)
+
+    // 找到当前元素的上一行阻挡元素
+    const checkRepeat = (ele: PageElement) => {
+      return this.myArray.some((item: PageElement) => {
+        const startX1 = ele.x,
+          startY1 = ele.y,
+          endX1 = startX1 + ele.width,
+          endY1 = startY1 + ele.height
+
+        const startX2 = item.x,
+          startY2 = item.y,
+          endX2 = startX2 + item.width,
+          endY2 = startY2 + item.height
+
+        const repeated = !(
+          endY2 < startY1 ||
+          endY1 < startY2 ||
+          startX1 > endX2 ||
+          startX2 > endX1
+        )
+        return repeated
+      })
+    }
+    const findTopY = (ele: PageElement) => {
+      const len = this.fillArr.length - 1
+      let y = 0
+      // 从下往上找
+      for (let i = len; i >= 0; i--) {
+        const fillEle = this.fillArr[i]
+        // console.log(fillEle)
+        if (!fillEle) {
+          continue
+        }
+        const fillEnd = fillEle.x + fillEle.width
+        const eleEnd = ele.x + ele.width
+        if (ele.width < this.pageWidth - 10 - fillEnd || eleEnd <= fillEle.x) {
+          continue
+        }
+        y = Math.max(fillEle.y + fillEle.height, y)
+      }
+      return y
+    }
+    const calcXY = (ele: PageElement) => {
+      const xSpace = this.pageWidth - 10 - ele.width
+      const unitSpace = 10
+      let y = findTopY(ele)
+      for (y < this.pageHeight; (y += 20); ) {
+        ele.y = y
+        // console.log(y)
+        for (let x = 0; x < xSpace; x += unitSpace) {
+          ele.x = x
+          const isRepeated = checkRepeat(ele)
+          if (isRepeated) {
+            continue
+          } else {
+            return
+          }
+        }
+      }
+    }
+    const len = this.myArray.length
+    const id = len + 1
+    const item: PageElement = {
+      id,
+      name: 'test' + id,
+      width: 200,
+      height: 200,
+      x: 0,
+      y: 0,
+    }
+    if (len) {
+      calcXY(item)
+    }
+    this.myArray.push(item)
+    this.updateElementPosition()
+  }
 }
 </script>
 <style lang="scss" scoped>
@@ -275,7 +317,7 @@ export default class Home extends Vue {
   background-color: #ebeaef;
   // transform: scale(0.8);
 }
-/deep/.draggable.resizable {
+::v-deep .draggable.resizable {
   border: none;
   padding: 5px;
   cursor: pointer;
