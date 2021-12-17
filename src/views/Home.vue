@@ -1,6 +1,11 @@
 <template>
   <div ref="page" :style="pageStyle">
-    <button @click="add" style="position: fixed; top: 0; left: 0; z-index: 9999;">添加</button>
+    <button
+      @click="add"
+      style="position: fixed; top: 0; left: 0; z-index: 9999;"
+    >
+      添加
+    </button>
     <div class="bi-layout" :style="layoutStyle">
       <vue-draggable-resizable
         v-for="element in myArray"
@@ -55,7 +60,6 @@ export default class Home extends Vue {
   scale = 1
   handles: string[] = ['tl', 'tr', 'br', 'bl']
   myArray: PageElement[] = []
-  fillArr: PageElement[] = []
   editElement: PageElement = {
     x: 0,
     y: 0,
@@ -188,7 +192,6 @@ export default class Home extends Vue {
       updateFillArr(ele)
       return
     })
-    this.fillArr = fillArr
     this.pageHeight = fillHeight
   }
   // 触发选中操作元素
@@ -226,35 +229,47 @@ export default class Home extends Vue {
 
   add() {
     // console.log(this.myArray)
-
-    // 找到当前元素的上一行阻挡元素
     const checkRepeat = (ele: PageElement) => {
-      return this.myArray.some((item: PageElement) => {
-        const startX1 = ele.x,
-          startY1 = ele.y,
-          endX1 = startX1 + ele.width,
-          endY1 = startY1 + ele.height
+      for (let i = 0; i < this.myArray.length; i++) {
+        const item: PageElement = this.myArray[i]
 
-        const startX2 = item.x,
-          startY2 = item.y,
-          endX2 = startX2 + item.width,
-          endY2 = startY2 + item.height
+        const eleLeft = ele.x,
+          eleTop = ele.y,
+          eleRight = eleLeft + ele.width,
+          eleBottom = eleTop + ele.height
+
+        const itemLeft = item.x,
+          itemTop = item.y,
+          itemRight = itemLeft + item.width,
+          itemBottom = itemTop + item.height
 
         const repeated = !(
-          endY2 < startY1 ||
-          endY1 < startY2 ||
-          startX1 > endX2 ||
-          startX2 > endX1
+          itemBottom < eleTop ||
+          eleBottom < itemTop ||
+          eleLeft > itemRight ||
+          itemLeft > eleRight
         )
-        return repeated
-      })
+        let offsetX = 0
+        const left = eleLeft - itemRight
+        const right = eleRight - itemLeft
+        if (left < 0) {
+          offsetX = Math.abs(left)
+        }
+        if (right > 0) {
+          offsetX = itemRight - eleLeft
+        }
+        if (repeated) {
+          return offsetX
+        }
+      }
+      return false
     }
     const findTopY = (ele: PageElement) => {
-      const len = this.fillArr.length - 1
+      const len = this.myArray.length - 1
       let y = 0
       // 从下往上找
       for (let i = len; i >= 0; i--) {
-        const fillEle = this.fillArr[i]
+        const fillEle = this.myArray[i]
         // console.log(fillEle)
         if (!fillEle) {
           continue
@@ -269,8 +284,8 @@ export default class Home extends Vue {
       return y
     }
     const calcXY = (ele: PageElement) => {
-      const xSpace = this.pageWidth - 10 - ele.width
-      const unitSpace = 10
+      const xSpace = this.pageWidth - ele.width - 10
+      const unitSpace = 1
       let y = findTopY(ele)
       for (y < this.pageHeight; (y += 20); ) {
         ele.y = y
@@ -278,7 +293,10 @@ export default class Home extends Vue {
         for (let x = 0; x < xSpace; x += unitSpace) {
           ele.x = x
           const isRepeated = checkRepeat(ele)
+          console.log(isRepeated);
+          
           if (isRepeated) {
+            x += isRepeated
             continue
           } else {
             return
