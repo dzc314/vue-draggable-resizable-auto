@@ -99,13 +99,13 @@ export default class Home extends Vue {
   }
   // 初始化demo数据
   dataInit() {
-    this.myArray = new Array(4).fill('').map((item, index) => {
+    this.myArray = new Array(6).fill('').map((item, index) => {
       const id = index + 1
       const element: PageElement = {
         id,
         name: 'test' + id,
-        x: Math.round(Math.random() * 10) * 40,
-        y: Math.round(Math.random() * 10) * 40,
+        x: Math.round(Math.random() * 10) * 80,
+        y: Math.round(Math.random() * 10) * 60,
         width: 160,
         height: 160,
       }
@@ -230,6 +230,8 @@ export default class Home extends Vue {
   add() {
     // console.log(this.myArray)
     const checkRepeat = (ele: PageElement) => {
+      let offsetX = 0
+
       for (let i = 0; i < this.myArray.length; i++) {
         const item: PageElement = this.myArray[i]
 
@@ -243,60 +245,62 @@ export default class Home extends Vue {
           itemRight = itemLeft + item.width,
           itemBottom = itemTop + item.height
 
-        const repeated = !(
-          itemBottom < eleTop ||
-          eleBottom < itemTop ||
-          eleLeft > itemRight ||
-          itemLeft > eleRight
-        )
-        let offsetX = 0
+        const noRepeated =
+          itemBottom <= eleTop ||
+          eleBottom <= itemTop ||
+          eleLeft >= itemRight ||
+          itemLeft >= eleRight
+        if (noRepeated) {
+          continue
+        }
         const left = eleLeft - itemRight
-        const right = eleRight - itemLeft
-        if (left < 0) {
-          offsetX = Math.abs(left)
-        }
-        if (right > 0) {
-          offsetX = itemRight - eleLeft
-        }
-        if (repeated) {
-          return offsetX
-        }
+        offsetX = Math.max(Math.abs(left), offsetX)
+        // const right = eleRight - itemLeft
+        // const top = eleTop - itemBottom
+        // const bottom = eleBottom - itemTop
+        // if (left < 0 || top < 0) {
+        // }
+        // if (right > 0 || bottom > 0) {
+        //   offsetX = Math.max(itemRight - eleLeft, offsetX)
+        // }
       }
-      return false
+      return offsetX
     }
-    const findTopY = (ele: PageElement) => {
-      const len = this.myArray.length - 1
-      let y = 0
-      // 从下往上找
-      for (let i = len; i >= 0; i--) {
-        const fillEle = this.myArray[i]
-        // console.log(fillEle)
-        if (!fillEle) {
-          continue
-        }
-        const fillEnd = fillEle.x + fillEle.width
-        const eleEnd = ele.x + ele.width
-        if (ele.width < this.pageWidth - 10 - fillEnd || eleEnd <= fillEle.x) {
-          continue
-        }
-        y = Math.max(fillEle.y + fillEle.height, y)
-      }
-      return y
-    }
+    // const findTopY = (ele: PageElement) => {
+    //   const len = this.myArray.length - 1
+    //   let y = 0
+    //   // 从下往上找
+    //   for (let i = len; i >= 0; i--) {
+    //     const fillEle = this.myArray[i]
+    //     // console.log(fillEle)
+    //     if (!fillEle) {
+    //       continue
+    //     }
+    //     const fillEnd = fillEle.x + fillEle.width
+    //     const eleEnd = ele.x + ele.width
+    //     if (ele.width < this.pageWidth - 10 - fillEnd || eleEnd <= fillEle.x) {
+    //       continue
+    //     }
+    //     y = Math.max(fillEle.y + fillEle.height, y)
+    //   }
+    //   return y
+    // }
     const calcXY = (ele: PageElement) => {
       const xSpace = this.pageWidth - ele.width - 10
-      const unitSpace = 1
-      let y = findTopY(ele)
-      for (y < this.pageHeight; (y += 20); ) {
+      // const unitSpace = 10
+      // let y = findTopY(ele)
+      // console.log(this.myArray);
+
+      for (let y = 0; y < this.pageHeight; y += 10) {
         ele.y = y
-        // console.log(y)
-        for (let x = 0; x < xSpace; x += unitSpace) {
+        // console.log('y',y)
+        for (let x = 0; x < xSpace; ) {
           ele.x = x
-          const isRepeated = checkRepeat(ele)
-          console.log(isRepeated);
-          
-          if (isRepeated) {
-            x += isRepeated
+          const offsetX = checkRepeat(ele)
+          // console.log('offsetX',offsetX)
+
+          if (offsetX) {
+            x += offsetX
             continue
           } else {
             return
@@ -309,8 +313,8 @@ export default class Home extends Vue {
     const item: PageElement = {
       id,
       name: 'test' + id,
-      width: 200,
-      height: 200,
+      width: 140 + Math.round(Math.random() * 10) * 10,
+      height: 140 + Math.round(Math.random() * 10) * 10,
       x: 0,
       y: 0,
     }
